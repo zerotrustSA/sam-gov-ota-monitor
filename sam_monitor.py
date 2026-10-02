@@ -4,6 +4,7 @@ Polls SAM.gov for new/updated Other Transaction Agreement notices and posts to T
 """
 
 import os
+import re
 import json
 import time
 import hashlib
@@ -42,14 +43,11 @@ SAM_OPPORTUNITIES_URL = "https://api.sam.gov/opportunities/v2/search"
 OTA_TITLE_TERMS = [
     "OTHER TRANSACTION AGREEMENT",
     "OTHER TRANSACTION FOR PROTOTYPE",
-    "OTA",
-    " OTA ",
-    "(OTA)",
-    "OTA:",
-    "OTA-",
-    "/OTA",
     "OTHER TRANSACTION",
 ]
+# "OTA" only as a whole word (OTA, OTAs, OTA's, (OTA), OTA-…). As a plain substring it
+# matched ROTARY, QUOTATION, DAKOTA, MINNESOTA, YOKOTA, POTABLE and similar.
+OTA_WORD = re.compile(r"\bOTAS?\b")
 
 # ── Branch and set-aside helpers ─────────────────────────────────────────────
 BRANCH_MAP = [
@@ -234,7 +232,7 @@ def collect_all_opportunities(posted_from: str, posted_to: str) -> list[dict]:
 def is_ota_relevant(opp: dict) -> bool:
     title    = (opp.get("title") or "").upper()
     combined = f" {title} "
-    return any(term in combined for term in OTA_TITLE_TERMS)
+    return any(term in combined for term in OTA_TITLE_TERMS) or bool(OTA_WORD.search(title))
 
 
 def classify_opportunity(opp: dict) -> str:
